@@ -2,16 +2,12 @@ import datetime
 import logging
 import os
 import time
-
 import cv2
 import numpy as np
 import tensorflow as tf
 import pickle
-
 import cnn_lstm_otc_ocr
 import utils
-
-# import helper
 
 FLAGS = utils.FLAGS
 label_len = utils.label_len
@@ -33,11 +29,11 @@ def train(train_dir=None, val_dir=None, mode='train'):
     val_feeder = utils.DataIterator(data_dir=val_dir)
     print('size: {}\n'.format(val_feeder.size))
 
-    num_train_samples = train_feeder.size  # 26000
-    num_batches_per_epoch = int(num_train_samples / FLAGS.batch_size)  # example: 26000/100
+    num_train_samples = train_feeder.size
+    num_batches_per_epoch = int(num_train_samples / FLAGS.batch_size)
 
-    num_val_samples = val_feeder.size  # 8000
-    num_batches_per_epoch_val = int(num_val_samples / FLAGS.batch_size)  # example: 8000/100
+    num_val_samples = val_feeder.size
+    num_batches_per_epoch_val = int(num_val_samples / FLAGS.batch_size)
     shuffle_idx_val = np.random.permutation(num_val_samples)
 
     config = tf.ConfigProto(allow_soft_placement=True)
@@ -45,12 +41,14 @@ def train(train_dir=None, val_dir=None, mode='train'):
     with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
 
+        if not os.path.isdir(FLAGS.log_dir):
+            os.mkdir(FLAGS.log_dir)
         saver = tf.train.Saver(tf.global_variables(), max_to_keep=5)
         train_writer = tf.summary.FileWriter(FLAGS.log_dir + '/train', sess.graph)
         if FLAGS.restore:
             ckpt = tf.train.latest_checkpoint(FLAGS.checkpoint_dir)
             if ckpt:
-                # the global_step will restore sa well
+                # the global_step will restore as well
                 saver.restore(sess, ckpt)
                 print('restore from checkpoint{0}'.format(ckpt))
 
@@ -59,28 +57,26 @@ def train(train_dir=None, val_dir=None, mode='train'):
             shuffle_idx = np.random.permutation(num_train_samples)
             train_cost = 0
             start_time = time.time()
-            batch_time = time.time()
 
             # the training part
             for cur_batch in range(num_batches_per_epoch):
                 batch_time = time.time()
                 indexs = [shuffle_idx[i % num_train_samples] for i in
                           range(cur_batch * FLAGS.batch_size, (cur_batch + 1) * FLAGS.batch_size)]
-                # batch_inputs, _, batch_labels = train_feeder.input_index_generate_batch(indexs)
                 batch_inputs, batch_labels = train_feeder.input_index_generate_batch(indexs)
-                # batch_inputs,batch_seq_len,batch_labels=utils.gen_batch(FLAGS.batch_size)
                 feed = {model.inputs: batch_inputs,
                         model.labels: batch_labels}
 
-                # if summary is needed
-                summary_str, batch_cost, step, _ = \
+                # summary and calculate the loss
+                summary_str, batch_loss, step, _ = \
                     sess.run([model.merged_summay, model.loss, model.global_step, model.train_op], feed_dict=feed)
-                # calculate the cost
-                train_cost += batch_cost * FLAGS.batch_size
+                train_cost += batch_loss * FLAGS.batch_size
                 train_writer.add_summary(summary_str, step)
+
                 if (cur_batch + 1) % 2 == 0:
-                    print('batch', cur_batch, '/', num_batches_per_epoch, ' loss =', batch_cost, ' time',
+                    print('batch', cur_batch, '/', num_batches_per_epoch, ' loss =', batch_loss, ' time',
                           time.time() - batch_time)
+
                 # save the checkpoint
                 if step % FLAGS.save_steps == 1:
                     if not os.path.isdir(FLAGS.checkpoint_dir):
@@ -88,7 +84,6 @@ def train(train_dir=None, val_dir=None, mode='train'):
                     logger.info('save checkpoint at step {0}', format(step))
                     saver.save(sess, os.path.join(FLAGS.checkpoint_dir, 'ocr-model'), global_step=step)
 
-                # train_err += the_err * FLAGS.batch_size
                 # do validation
                 if step % FLAGS.validation_steps == 0:
                     acc_batch_total = 0.
@@ -97,7 +92,6 @@ def train(train_dir=None, val_dir=None, mode='train'):
                     for j in range(num_batches_per_epoch_val):
                         indexs_val = [shuffle_idx_val[i % num_val_samples] for i in
                                       range(j * FLAGS.batch_size, (j + 1) * FLAGS.batch_size)]
-                        # val_inputs, _, val_labels = val_feeder.input_index_generate_batch(indexs_val)
                         val_inputs, val_labels = val_feeder.input_index_generate_batch(indexs_val)
                         val_feed = {model.inputs: val_inputs,
                                     model.labels: val_labels}
@@ -105,10 +99,6 @@ def train(train_dir=None, val_dir=None, mode='train'):
                         lastbatch_err, acc, lr = \
                             sess.run([model.loss, model.accuracy, model.lrn_rate], feed_dict=val_feed)
 
-                        # print the decode result
-                        # ori_labels = val_feeder.the_label(indexs_val)
-                        # acc = utils.accuracy_calculation(ori_labels, dense_decoded,
-                        #                                  ignore_value=-1, isPrint=True)
                         acc_batch_total += acc
 
                     accuracy = (acc_batch_total * FLAGS.batch_size) / num_val_samples
@@ -124,9 +114,25 @@ def train(train_dir=None, val_dir=None, mode='train'):
                                      cur_epoch + 1, FLAGS.num_epochs, accuracy, avg_train_cost,
                                      lastbatch_err, time.time() - start_time, lr))
 
+            # train with val dataset to reduce overfitting
+            if (cur_epoch + 1) % FLAGS.train_with_val_steps == 0:
+                shuffle_idx_val = np.random.permutation(num_val_samples)
+                for cur_batch in range(num_batches_per_epoch_val):
+                    batch_time = time.time()
+                    indexs = [shuffle_idx_val[i % num_val_samples] for i in
+                              range(cur_batch * FLAGS.batch_size, (cur_batch + 1) * FLAGS.batch_size)]
+                    batch_inputs, batch_labels = val_feeder.input_index_generate_batch(indexs)
+                    feed = {model.inputs: batch_inputs,
+                            model.labels: batch_labels}
+
+                    batch_loss, step, _ = \
+                        sess.run([model.loss, model.global_step, model.train_op], feed_dict=feed)
+
+                    if (cur_batch + 1) % 2 == 0:
+                        print('train with val dataset: batch', cur_batch, '/', num_batches_per_epoch_val,
+                              ' loss =', batch_loss, ' time', time.time() - batch_time)
 
 def infer(img_path, mode='infer'):
-
     def load_img_path(img_path):
         fname_list = os.listdir(img_path)
         path_list = [os.path.join(img_path, fn) for fn in fname_list]
@@ -189,7 +195,7 @@ def infer(img_path, mode='infer'):
         pr_array = np.zeros([label_len])
         pred_array = np.zeros([label_len])
         for i in range(label_len):
-            pr_array[i] = pr[i][0]/(pr[i][0]+pr[i][1])
+            pr_array[i] = pr[i][0] / (pr[i][0] + pr[i][1])
             if pr_array[i] >= 0.5:
                 pred_array[i] = 0.
             else:
@@ -198,7 +204,6 @@ def infer(img_path, mode='infer'):
         result_dict["preds"].append(pred_array)
 
     pickle_dump(os.path.join(FLAGS.infer_result_dir, "infer_result.data"), result_dict)
-
 
 
 def pickle_dump(file_path, content_list):

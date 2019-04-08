@@ -34,7 +34,6 @@ class LSTMOCR(object):
         while min_size > 1:
             min_size = (min_size + 1) // 2
             count_ += 1
-        assert (FLAGS.cnn_count <= count_, "FLAGS.cnn_count should be <= {}!".format(count_))
 
         # CNN part
         with tf.variable_scope('cnn'):
@@ -46,7 +45,6 @@ class LSTMOCR(object):
                     x = self._leaky_relu(x, FLAGS.leakiness)
                     # x = self._max_pool(x, 2, strides[1])
 
-                    # print('----x.get_shape().as_list(): {}'.format(x.get_shape().as_list()))
                     _, feature_h, feature_w, _ = x.get_shape().as_list()
 
         # change feature_w to label_len
@@ -61,7 +59,8 @@ class LSTMOCR(object):
                                dtype=tf.float32,
                                initializer=tf.constant_initializer())
         x = tf.matmul(x, W_cl) + b_cl  # [batch_size*feature_h*FLAGS.out_channels, label_len]
-        x = tf.reshape(x, [FLAGS.batch_size, feature_h, FLAGS.out_channels, label_len])  # [batch_size, feature_h, FLAGS.out_channels, label_len]
+        x = tf.reshape(x, [FLAGS.batch_size, feature_h, FLAGS.out_channels,
+                           label_len])  # [batch_size, feature_h, FLAGS.out_channels, label_len]
         x = tf.transpose(x, [0, 1, 3, 2])  # [batch_size, feature_h, label_len, FLAGS.out_channels]
         _, feature_h, feature_w, _ = x.get_shape().as_list()
         print('\nfeature_h: {}, feature_w: {}'.format(feature_h, feature_w))
@@ -98,6 +97,8 @@ class LSTMOCR(object):
                 time_major=False
             )  # [batch_size, max_stepsize, FLAGS.num_hidden]
 
+        # softmax part
+        with tf.variable_scope('softmax'):
             # Reshaping to apply the same weights over the timesteps
             outputs = tf.reshape(outputs, [-1, FLAGS.num_hidden])  # [batch_size * max_stepsize, FLAGS.num_hidden]
 
@@ -111,6 +112,9 @@ class LSTMOCR(object):
                                 initializer=tf.constant_initializer())
 
             self.logits = tf.matmul(outputs, W) + b
+            if self.mode == 'train':
+                self.logits = tf.nn.dropout(self.logits, keep_prob=FLAGS.output_keep_prob)
+
             # Reshaping back to the original shape
             shape = tf.shape(x)
             self.logits = tf.reshape(self.logits, [shape[0], -1, num_class])
@@ -118,18 +122,10 @@ class LSTMOCR(object):
             self.prob = tf.reshape(self.logits, [-1, num_class])
             self.prob = tf.nn.softmax(self.prob)
             self.prob = tf.reshape(self.prob, tf.shape(self.logits))
-            # Time major
-            # self.logits = tf.transpose(self.logits, (1, 0, 2))
 
     def _build_train_op(self):
         # self.global_step = tf.Variable(0, trainable=False)
         self.global_step = tf.train.get_or_create_global_step()
-
-        # self.loss = tf.nn.ctc_loss(labels=self.labels,
-        #                            inputs=self.logits,
-        #                            sequence_length=self.seq_len)
-        # self.cost = tf.reduce_mean(self.loss)
-        # tf.summary.scalar('cost', self.cost)
 
         label_reshaped = tf.reshape(self.labels, [-1, num_class])
         logit_reshaped = tf.reshape(self.logits, [-1, num_class])
@@ -144,13 +140,6 @@ class LSTMOCR(object):
                                                    staircase=True)
         tf.summary.scalar('learning_rate', self.lrn_rate)
 
-        # self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.lrn_rate,
-        #                                            momentum=FLAGS.momentum).minimize(self.cost,
-        #                                                                              global_step=self.global_step)
-        # self.optimizer = tf.train.MomentumOptimizer(learning_rate=self.lrn_rate,
-        #                                             momentum=FLAGS.momentum,
-        #                                             use_nesterov=True).minimize(self.cost,
-        #                                                                         global_step=self.global_step)
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lrn_rate,
                                                 beta1=FLAGS.beta1,
                                                 beta2=FLAGS.beta2).minimize(self.loss,
@@ -163,15 +152,6 @@ class LSTMOCR(object):
             tf.cast(tf.equal(tf.argmax(prob_reshaped, axis=1), tf.argmax(label_reshaped, axis=1)), dtype=tf.float32)
         )
         tf.summary.scalar('accuracy', self.accuracy)
-
-        # # Option 2: tf.nn.ctc_beam_search_decoder
-        # # (it's slower but you'll get better results)
-        # self.decoded, self.log_prob = \
-        #     tf.nn.ctc_beam_search_decoder(self.logits,
-        #                                   self.seq_len,
-        #                                   merge_repeated=False)
-        # # self.decoded, self.log_prob = tf.nn.ctc_greedy_decoder(logits, seq_len,merge_repeated=False)
-        # self.dense_decoded = tf.sparse_tensor_to_dense(self.decoded[0], default_value=-1)
 
     def _conv2d(self, x, name, filter_size, in_channels, out_channels, strides):
         with tf.variable_scope(name):

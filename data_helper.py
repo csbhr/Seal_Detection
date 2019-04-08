@@ -2,6 +2,7 @@ import numpy as np
 import os
 import shutil
 import cv2
+import random
 
 
 def copy_files(origin_file_paths, dest_file_paths):
@@ -130,10 +131,10 @@ def copy_files(origin_file_paths, dest_file_paths):
 #     flip_2 = cv2.flip(img, -1)
 #     return img, rotated_1, rotated_2, flip_0, flip_1, flip_2
 #
-# ori_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/CNN_LSTM_CTC_Tensorflow/unlabeled/before_extend/train"
+# ori_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/unlabeled/before_extend/train"
 # ori_right_root = os.path.join(ori_root, "right")
 # ori_wrong_root = os.path.join(ori_root, "wrong")
-# dest_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/CNN_LSTM_CTC_Tensorflow/unlabeled/after_extend/train"
+# dest_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/unlabeled/after_extend/train"
 # dest_right_root = os.path.join(dest_root, "right")
 # dest_wrong_root = os.path.join(dest_root, "wrong")
 #
@@ -156,68 +157,68 @@ def copy_files(origin_file_paths, dest_file_paths):
 #     cv2.imwrite(os.path.join(dest_wrong_root, "{}_{}_{}.jpg".format(20000 + ind, la, pos)), rotated_1)
 #     cv2.imwrite(os.path.join(dest_wrong_root, "{}_{}_{}.jpg".format(30000 + ind, la, pos)), rotated_2)
 #     cv2.imwrite(os.path.join(dest_wrong_root, "{}_{}_{}.jpg".format(40000 + ind, la, pos)), flip_0)
-#     cv2.imwrite(os.path.join(dest_wrong_root, "{}_{}_{}.jpg".format(50000 + ind, la, 18 - pos)), flip_1)
-#     cv2.imwrite(os.path.join(dest_wrong_root, "{}_{}_{}.jpg".format(60000 + ind, la, 18 - pos)), flip_2)
+#     cv2.imwrite(os.path.join(dest_wrong_root, "{}_{}_{}.jpg".format(50000 + ind, la, 20 - pos)), flip_1)
+#     cv2.imwrite(os.path.join(dest_wrong_root, "{}_{}_{}.jpg".format(60000 + ind, la, 20 - pos)), flip_2)
 
 
-# 转换成label
-def de_label(diff_inds=None):
-    label = "11111111111111111"
-    if not diff_inds is None:
-        for ind in diff_inds:
-            label = label[:ind] + "0" + label[ind + 1:]
-    return label
-
-ori_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/CNN_LSTM_CTC_Tensorflow/unlabeled/after_extend"
-ori_train_root = os.path.join(ori_root, "train")
-ori_train_right_root = os.path.join(ori_train_root, "right")
-ori_train_wrong_root = os.path.join(ori_train_root, "wrong")
-ori_val_root = os.path.join(ori_root, "val")
-ori_val_right_root = os.path.join(ori_val_root, "right")
-ori_val_wrong_root = os.path.join(ori_val_root, "wrong")
-dest_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/CNN_LSTM_CTC_Tensorflow/labeled"
-dest_train_root = os.path.join(dest_root, "train")
-dest_val_root = os.path.join(dest_root, "val")
-
-fname_list = os.listdir(ori_train_right_root)
-ori_path_list = []
-dest_path_list = []
-for fn in fname_list:
-    ori_path_list.append(os.path.join(ori_train_right_root, fn))
-    ind = fn.split("_")[0]
-    label = de_label()
-    dest_path_list.append(os.path.join(dest_train_root, "{}_{}.jpg".format(ind, label)))
-copy_files(ori_path_list, dest_path_list)
-
-fname_list = os.listdir(ori_train_wrong_root)
-ori_path_list = []
-dest_path_list = []
-for fn in fname_list:
-    ori_path_list.append(os.path.join(ori_train_wrong_root, fn))
-    ind, pos = fn.split("_")[0], int(fn.split("_")[2].split(".")[0])
-    label = de_label([pos-2])
-    dest_path_list.append(os.path.join(dest_train_root, "{}_{}.jpg".format(ind, label)))
-copy_files(ori_path_list, dest_path_list)
-
-fname_list = os.listdir(ori_val_right_root)
-ori_path_list = []
-dest_path_list = []
-for fn in fname_list:
-    ori_path_list.append(os.path.join(ori_val_right_root, fn))
-    ind = fn.split("_")[0]
-    label = de_label()
-    dest_path_list.append(os.path.join(dest_val_root, "{}_{}.jpg".format(ind, label)))
-copy_files(ori_path_list, dest_path_list)
-
-fname_list = os.listdir(ori_val_wrong_root)
-ori_path_list = []
-dest_path_list = []
-for fn in fname_list:
-    ori_path_list.append(os.path.join(ori_val_wrong_root, fn))
-    ind, pos = fn.split("_")[0], int(fn.split("_")[2].split(".")[0])
-    label = de_label([pos-2])
-    dest_path_list.append(os.path.join(dest_val_root, "{}_{}.jpg".format(ind, label)))
-copy_files(ori_path_list, dest_path_list)
+# # 转换成label
+# def de_label(diff_inds=None):
+#     label = "11111111111111111"
+#     if not diff_inds is None:
+#         for ind in diff_inds:
+#             label = label[:ind] + "0" + label[ind + 1:]
+#     return label
+#
+# ori_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/unlabeled/after_extend"
+# ori_train_root = os.path.join(ori_root, "train")
+# ori_train_right_root = os.path.join(ori_train_root, "right")
+# ori_train_wrong_root = os.path.join(ori_train_root, "wrong")
+# ori_val_root = os.path.join(ori_root, "val")
+# ori_val_right_root = os.path.join(ori_val_root, "right")
+# ori_val_wrong_root = os.path.join(ori_val_root, "wrong")
+# dest_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/labeled"
+# dest_train_root = os.path.join(dest_root, "train_and_val")
+# dest_val_root = os.path.join(dest_root, "test")
+#
+# fname_list = os.listdir(ori_train_right_root)
+# ori_path_list = []
+# dest_path_list = []
+# for fn in fname_list:
+#     ori_path_list.append(os.path.join(ori_train_right_root, fn))
+#     ind = fn.split("_")[0]
+#     label = de_label()
+#     dest_path_list.append(os.path.join(dest_train_root, "{}_{}.jpg".format(ind, label)))
+# copy_files(ori_path_list, dest_path_list)
+#
+# fname_list = os.listdir(ori_train_wrong_root)
+# ori_path_list = []
+# dest_path_list = []
+# for fn in fname_list:
+#     ori_path_list.append(os.path.join(ori_train_wrong_root, fn))
+#     ind, pos = fn.split("_")[0], int(fn.split("_")[2].split(".")[0])
+#     label = de_label([pos-2])
+#     dest_path_list.append(os.path.join(dest_train_root, "{}_{}.jpg".format(ind, label)))
+# copy_files(ori_path_list, dest_path_list)
+#
+# fname_list = os.listdir(ori_val_right_root)
+# ori_path_list = []
+# dest_path_list = []
+# for fn in fname_list:
+#     ori_path_list.append(os.path.join(ori_val_right_root, fn))
+#     ind = fn.split("_")[0]
+#     label = de_label()
+#     dest_path_list.append(os.path.join(dest_val_root, "{}_{}.jpg".format(ind, label)))
+# copy_files(ori_path_list, dest_path_list)
+#
+# fname_list = os.listdir(ori_val_wrong_root)
+# ori_path_list = []
+# dest_path_list = []
+# for fn in fname_list:
+#     ori_path_list.append(os.path.join(ori_val_wrong_root, fn))
+#     ind, pos = fn.split("_")[0], int(fn.split("_")[2].split(".")[0])
+#     label = de_label([pos-2])
+#     dest_path_list.append(os.path.join(dest_val_root, "{}_{}.jpg".format(ind, label)))
+# copy_files(ori_path_list, dest_path_list)
 
 
 # # 生成infer数据集并转换为label
@@ -251,3 +252,75 @@ copy_files(ori_path_list, dest_path_list)
 #     dest_path_list.append(os.path.join(dest_root, "{}_{}.jpg".format(ind, label)))
 #
 # copy_files(ori_path_list, dest_path_list)
+
+
+# 生成交叉验证数据集
+ori_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/labeled/train_and_val"
+dest_root = "/home/csbhr/workspace/python/python_data/Seal_Detection/labeled/cross_validation"
+dest_group1_root = os.path.join(dest_root, "group_1")
+dest_group2_root = os.path.join(dest_root, "group_2")
+dest_group3_root = os.path.join(dest_root, "group_3")
+dest_group4_root = os.path.join(dest_root, "group_4")
+dest_group5_root = os.path.join(dest_root, "group_5")
+
+fname_list = os.listdir(ori_root)
+random.shuffle(fname_list)
+
+unit_len = int(len(fname_list) / 5)
+fname_list_group1 = fname_list[:unit_len]
+fname_list_group2 = fname_list[unit_len:unit_len * 2]
+fname_list_group3 = fname_list[unit_len * 2:unit_len * 3]
+fname_list_group4 = fname_list[unit_len * 3:unit_len * 4]
+fname_list_group5 = fname_list[unit_len * 4:]
+
+train_list = fname_list_group1 + fname_list_group2 + fname_list_group3 + fname_list_group4
+val_list = fname_list_group5
+group1_dict = {
+    "ori_train": [os.path.join(ori_root, fn) for fn in train_list],
+    "dest_train": [os.path.join(dest_group1_root, "train", fn) for fn in train_list],
+    "ori_val": [os.path.join(ori_root, fn) for fn in val_list],
+    "dest_val": [os.path.join(dest_group1_root, "val", fn) for fn in val_list]
+}
+train_list = fname_list_group1 + fname_list_group2 + fname_list_group3 + fname_list_group5
+val_list = fname_list_group4
+group2_dict = {
+    "ori_train": [os.path.join(ori_root, fn) for fn in train_list],
+    "dest_train": [os.path.join(dest_group2_root, "train", fn) for fn in train_list],
+    "ori_val": [os.path.join(ori_root, fn) for fn in val_list],
+    "dest_val": [os.path.join(dest_group2_root, "val", fn) for fn in val_list]
+}
+train_list = fname_list_group1 + fname_list_group2 + fname_list_group4 + fname_list_group5
+val_list = fname_list_group3
+group3_dict = {
+    "ori_train": [os.path.join(ori_root, fn) for fn in train_list],
+    "dest_train": [os.path.join(dest_group3_root, "train", fn) for fn in train_list],
+    "ori_val": [os.path.join(ori_root, fn) for fn in val_list],
+    "dest_val": [os.path.join(dest_group3_root, "val", fn) for fn in val_list]
+}
+train_list = fname_list_group1 + fname_list_group3 + fname_list_group4 + fname_list_group5
+val_list = fname_list_group2
+group4_dict = {
+    "ori_train": [os.path.join(ori_root, fn) for fn in train_list],
+    "dest_train": [os.path.join(dest_group4_root, "train", fn) for fn in train_list],
+    "ori_val": [os.path.join(ori_root, fn) for fn in val_list],
+    "dest_val": [os.path.join(dest_group4_root, "val", fn) for fn in val_list]
+}
+train_list = fname_list_group2 + fname_list_group3 + fname_list_group4 + fname_list_group5
+val_list = fname_list_group1
+group5_dict = {
+    "ori_train": [os.path.join(ori_root, fn) for fn in train_list],
+    "dest_train": [os.path.join(dest_group5_root, "train", fn) for fn in train_list],
+    "ori_val": [os.path.join(ori_root, fn) for fn in val_list],
+    "dest_val": [os.path.join(dest_group5_root, "val", fn) for fn in val_list]
+}
+
+copy_files(group1_dict["ori_train"], group1_dict["dest_train"])
+copy_files(group1_dict["ori_val"], group1_dict["dest_val"])
+copy_files(group2_dict["ori_train"], group2_dict["dest_train"])
+copy_files(group2_dict["ori_val"], group2_dict["dest_val"])
+copy_files(group3_dict["ori_train"], group3_dict["dest_train"])
+copy_files(group3_dict["ori_val"], group3_dict["dest_val"])
+copy_files(group4_dict["ori_train"], group4_dict["dest_train"])
+copy_files(group4_dict["ori_val"], group4_dict["dest_val"])
+copy_files(group5_dict["ori_train"], group5_dict["dest_train"])
+copy_files(group5_dict["ori_val"], group5_dict["dest_val"])
