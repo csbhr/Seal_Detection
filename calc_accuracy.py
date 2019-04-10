@@ -27,8 +27,12 @@ def pickle_load(file_path):
 
 
 FLAGS = utils.FLAGS
-result_dict = pickle_load(os.path.join(FLAGS.infer_result_dir, "infer_result_test.data"))
-# result_dict = pickle_load(os.path.join(FLAGS.infer_result_dir, "infer_result_test_all.data"))
+
+# result_dict = pickle_load(os.path.join(FLAGS.infer_result_dir, "infer_result_test.data"))
+result_dict = pickle_load(os.path.join(FLAGS.infer_result_dir, "infer_result_test_all.data"))
+# print("# 计算测试集准确度")
+print("# 计算所有数据集准确度")
+
 labels = result_dict["labels"]
 probs = result_dict["probs"]
 preds = result_dict["preds"]
@@ -36,8 +40,8 @@ preds = result_dict["preds"]
 sample_num = len(labels)
 
 
-print("# 计算测试集准确度")
-# print("# 计算所有数据集准确度")
+
+
 
 
 # 总体准确度

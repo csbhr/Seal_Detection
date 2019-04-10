@@ -6,10 +6,11 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import pickle
-import cnn_lstm_otc_ocr
+import model
 import utils
+import flags
 
-FLAGS = utils.FLAGS
+FLAGS = flags.FLAGS
 label_len = utils.label_len
 num_class = utils.num_class
 
@@ -18,8 +19,8 @@ logger.setLevel(logging.INFO)
 
 
 def train(train_dir=None, val_dir=None, mode='train'):
-    model = cnn_lstm_otc_ocr.LSTMOCR(mode)
-    model.build_graph()
+    network = model.Model(mode)
+    network.build_graph()
 
     print('loading train data')
     train_feeder = utils.DataIterator(data_dir=train_dir)
@@ -64,12 +65,12 @@ def train(train_dir=None, val_dir=None, mode='train'):
                 indexs = [shuffle_idx[i % num_train_samples] for i in
                           range(cur_batch * FLAGS.batch_size, (cur_batch + 1) * FLAGS.batch_size)]
                 batch_inputs, batch_labels = train_feeder.input_index_generate_batch(indexs)
-                feed = {model.inputs: batch_inputs,
-                        model.labels: batch_labels}
+                feed = {network.inputs: batch_inputs,
+                        network.labels: batch_labels}
 
                 # summary and calculate the loss
                 summary_str, batch_loss, step, _ = \
-                    sess.run([model.merged_summay, model.loss, model.global_step, model.train_op], feed_dict=feed)
+                    sess.run([network.merged_summay, network.loss, network.global_step, network.train_op], feed_dict=feed)
                 train_cost += batch_loss * FLAGS.batch_size
                 train_writer.add_summary(summary_str, step)
 
@@ -93,11 +94,11 @@ def train(train_dir=None, val_dir=None, mode='train'):
                         indexs_val = [shuffle_idx_val[i % num_val_samples] for i in
                                       range(j * FLAGS.batch_size, (j + 1) * FLAGS.batch_size)]
                         val_inputs, val_labels = val_feeder.input_index_generate_batch(indexs_val)
-                        val_feed = {model.inputs: val_inputs,
-                                    model.labels: val_labels}
+                        val_feed = {network.inputs: val_inputs,
+                                    network.labels: val_labels}
 
                         lastbatch_err, acc, lr = \
-                            sess.run([model.loss, model.accuracy, model.lrn_rate], feed_dict=val_feed)
+                            sess.run([network.loss, network.accuracy, network.lrn_rate], feed_dict=val_feed)
 
                         acc_batch_total += acc
 
@@ -122,11 +123,11 @@ def train(train_dir=None, val_dir=None, mode='train'):
                     indexs = [shuffle_idx_val[i % num_val_samples] for i in
                               range(cur_batch * FLAGS.batch_size, (cur_batch + 1) * FLAGS.batch_size)]
                     batch_inputs, batch_labels = val_feeder.input_index_generate_batch(indexs)
-                    feed = {model.inputs: batch_inputs,
-                            model.labels: batch_labels}
+                    feed = {network.inputs: batch_inputs,
+                            network.labels: batch_labels}
 
                     batch_loss, step, _ = \
-                        sess.run([model.loss, model.global_step, model.train_op], feed_dict=feed)
+                        sess.run([network.loss, network.global_step, network.train_op], feed_dict=feed)
 
                     if (cur_batch + 1) % 2 == 0:
                         print('train with val dataset: batch', cur_batch, '/', num_batches_per_epoch_val,
@@ -140,8 +141,8 @@ def infer(img_path, mode='infer'):
 
     imgList = load_img_path(img_path)
 
-    model = cnn_lstm_otc_ocr.LSTMOCR(mode)
-    model.build_graph()
+    network = model.Model(mode)
+    network.build_graph()
 
     total_steps = int(len(imgList) / FLAGS.batch_size)
 
@@ -174,8 +175,8 @@ def infer(img_path, mode='infer'):
 
             imgs_input = np.asarray(imgs_input)
 
-            feed = {model.inputs: imgs_input}
-            batch_prob = sess.run(model.prob, feed_dict=feed)
+            feed = {network.inputs: imgs_input}
+            batch_prob = sess.run(network.prob, feed_dict=feed)
             result_dict["probs"].extend(batch_prob)
 
     labels = result_dict["labels"]

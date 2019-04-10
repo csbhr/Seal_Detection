@@ -1,16 +1,13 @@
-"""
-
-"""
-
 import tensorflow as tf
 import utils
+import flags
 
-FLAGS = utils.FLAGS
+FLAGS = flags.FLAGS
 label_len = utils.label_len
 num_class = utils.num_class
 
 
-class LSTMOCR(object):
+class Model(object):
     def __init__(self, mode):
         self.mode = mode
         self.inputs = tf.placeholder(tf.float32, [None, FLAGS.image_height, FLAGS.image_width, FLAGS.image_channel])
